@@ -1,0 +1,9 @@
+[project]
+cmake_root = "FileStructureExample/CodeRoot"
+test_cmake_lists = "tests/CMakeLists.txt"
+
+[search]
+exclude_dirs = []
+
+[output]
+output_dir = "mocks_out"
