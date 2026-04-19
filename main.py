@@ -9,7 +9,7 @@ except ModuleNotFoundError:
     try:
         import tomli as tomllib  # type: ignore[no-redef]
     except ModuleNotFoundError:
-        print("Error: Python 3.11+ required, or install 'tomli': pip install tomli")
+        print("Error: missing TOML library. Run: pip install tomli")
         sys.exit(1)
 
 from log_parser import parse_undefined_symbols
