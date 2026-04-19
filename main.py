@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import configparser
 import sys
 from pathlib import Path
@@ -14,11 +15,13 @@ CONFIG_FILE = "mockgenerator.ini"
 
 
 def main() -> None:
-    if len(sys.argv) != 2:
-        print(f"Usage: python main.py <build_log>")
-        sys.exit(1)
+    parser = argparse.ArgumentParser(description="Generate CMocka mocks from a build log.")
+    parser.add_argument("log", metavar="<build_log>", help="Path to the CMake/make error log")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Print detailed output")
+    args = parser.parse_args()
 
-    log_path = sys.argv[1]
+    log_path = args.log
+    verbose = args.verbose
     config = _load_config()
 
     cmake_root = config.get("project", "cmake_root")
@@ -26,7 +29,6 @@ def main() -> None:
     exclude_dirs = _parse_list(config.get("search", "exclude_dirs", fallback=""))
     cmake_vars = _read_cmake_vars(config)
     output_dir = config.get("output", "output_dir", fallback="mocks_out")
-
     symbol_pattern = config.get("log_parser", "symbol_pattern", fallback=DEFAULT_PATTERN)
 
     print(f"[1/4] Parsing build log: {log_path}")
@@ -35,18 +37,29 @@ def main() -> None:
         print("  No undefined symbols found. Nothing to do.")
         return
     print(f"  Found {len(symbols)} symbol(s).")
+    if verbose:
+        for s in symbols:
+            print(f"    {s}")
 
-    print(f"[2/4] Analyzing CMake includes: {test_cmake_lists}")
+    print(f"\n[2/4] Analyzing CMake includes: {test_cmake_lists}")
     include_dirs = get_include_dirs(test_cmake_lists, cmake_root, exclude_dirs, cmake_vars)
     print(f"  Found {len(include_dirs)} include dir(s).")
+    if verbose:
+        for d in include_dirs:
+            print(f"    {d}")
 
-    print(f"[3/4] Scanning headers for prototypes...")
+    print(f"\n[3/4] Scanning headers for prototypes...")
     result = scan_symbols(symbols, include_dirs)
     print(f"  Resolved: {len(result.functions)} function(s), {len(result.variables)} variable(s).")
+    if verbose:
+        for decl in result.functions.values():
+            print(f"    {decl.name}  ->  {decl.source_file}")
+        for decl in result.variables.values():
+            print(f"    {decl.name}  ->  {decl.source_file}")
     if result.not_found:
         print(f"  Unresolved ({len(result.not_found)}): {', '.join(result.not_found)}")
 
-    print(f"[4/4] Generating mocks...")
+    print(f"\n[4/4] Generating mocks...")
     mock_code = generate_mocks(result)
 
     output_path = _write_output(mock_code, log_path, output_dir)
@@ -81,7 +94,6 @@ output_dir = mocks_out
 def _read_cmake_vars(config: configparser.ConfigParser) -> dict:
     if not config.has_section("cmake_vars"):
         return {}
-    # Re-read the file with case-preserved keys for this section only
     case_config = configparser.RawConfigParser()
     case_config.optionxform = str
     case_config.read(CONFIG_FILE, encoding="utf-8")
