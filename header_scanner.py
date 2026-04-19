@@ -77,6 +77,7 @@ def _find_declaration(symbol: str, headers: list[Path]):
         except OSError:
             continue
         text = _strip_comments(text)
+        text = _strip_preprocessor(text)
         decl = _extract_declaration(text, symbol, pattern)
         if decl:
             return _parse_declaration(decl, symbol, str(header))
@@ -87,6 +88,11 @@ def _strip_comments(text: str) -> str:
     text = re.sub(r"/\*.*?\*/", " ", text, flags=re.DOTALL)
     text = re.sub(r"//[^\n]*", "", text)
     return text
+
+
+def _strip_preprocessor(text: str) -> str:
+    """Replace preprocessor directives with semicolons to act as declaration boundaries."""
+    return re.sub(r"^\s*#[^\n]*", ";", text, flags=re.MULTILINE)
 
 
 def _extract_declaration(text: str, symbol: str, pattern: re.Pattern) -> str | None:
