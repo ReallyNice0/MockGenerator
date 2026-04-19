@@ -217,19 +217,13 @@ def _is_pointer_param(param: str) -> bool:
     for macro in POINTER_MACROS:
         if re.match(rf"{macro}\s*\(", param):
             return True
-    # `*` anywhere in the type portion (everything except the last word/token)
-    tokens = param.split()
-    type_part = " ".join(tokens[:-1]) if len(tokens) > 1 else param
-    return "*" in type_part
+    return "*" in param
 
 
 def extract_param_name(param: str) -> str:
     """Return the parameter name from a raw param string."""
-    # Last whitespace-separated token, strip leading `*`
-    tokens = param.split()
-    if not tokens:
-        return ""
-    return tokens[-1].lstrip("*")
+    tokens = [t for t in re.split(r"[\s*]+", param.strip()) if t]
+    return tokens[-1] if tokens else ""
 
 
 # ---------------------------------------------------------------------------

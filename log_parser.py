@@ -4,18 +4,22 @@ import re
 from pathlib import Path
 
 
-def parse_undefined_symbols(log_path: str) -> list[str]:
+DEFAULT_PATTERN = r"undefined reference to `([^']+)'"
+
+
+def parse_undefined_symbols(log_path: str, pattern: str = DEFAULT_PATTERN) -> list[str]:
     """
     Parse a CMake/make build log and extract all undefined reference symbol names.
 
+    The pattern must contain exactly one capture group for the symbol name.
     Returns a sorted, deduplicated list of symbol names.
     """
-    pattern = re.compile(r"undefined reference to `([^']+)'")
+    compiled = re.compile(pattern)
     symbols = set()
 
     with open(log_path, encoding="utf-8", errors="replace") as f:
         for line in f:
-            match = pattern.search(line)
+            match = compiled.search(line)
             if match:
                 symbols.add(match.group(1))
 

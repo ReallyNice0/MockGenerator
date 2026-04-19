@@ -4,7 +4,7 @@ import configparser
 import sys
 from pathlib import Path
 
-from log_parser import parse_undefined_symbols
+from log_parser import parse_undefined_symbols, DEFAULT_PATTERN
 from cmake_analyzer import get_include_dirs
 from header_scanner import scan_symbols
 from mock_generator import generate_mocks
@@ -27,8 +27,10 @@ def main() -> None:
     cmake_vars = _read_cmake_vars(config)
     output_dir = config.get("output", "output_dir", fallback="mocks_out")
 
+    symbol_pattern = config.get("log_parser", "symbol_pattern", fallback=DEFAULT_PATTERN)
+
     print(f"[1/4] Parsing build log: {log_path}")
-    symbols = parse_undefined_symbols(log_path)
+    symbols = parse_undefined_symbols(log_path, symbol_pattern)
     if not symbols:
         print("  No undefined symbols found. Nothing to do.")
         return
