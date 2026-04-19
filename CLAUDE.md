@@ -88,23 +88,20 @@ Der `/* MOCK: verify initial value */`-Kommentar macht alle generierten Mocks
 projektübergreifend per `grep`/`ripgrep` auffindbar.
 
 ## Konfiguration
-Stabile Einstellungen (Pfade, Excludes) werden in einer **`mockgenerator.toml`** gepflegt —
-einmal anlegen, im Repo versionieren, fertig. Das Tool ist für Nutzer gedacht die keine
-komplexen CLI-Aufrufe machen wollen.
+Stabile Einstellungen (Pfade, Excludes) werden in einer **`mockgenerator.ini`** gepflegt —
+einmal anlegen, im Repo versionieren, fertig. Keine externen Abhängigkeiten (Python 3.8+ stdlib).
 
-```toml
+```ini
 [project]
-cmake_root = "C:/Projects/MyProject"
+cmake_root = C:/Projects/MyProject
 
 [search]
-exclude_dirs = [
-    "generated/autosar",
-    "vendor/lowlevel",
-]
+exclude_dirs =
+    generated/autosar
+    vendor/lowlevel
 
 [output]
-mode = "file"        # "file" = .txt Ausgabe | "inplace" = direkt ins Testfile
-output_dir = "mocks_out"
+output_dir = mocks_out
 ```
 
 **CLI** wird nur noch für das Log-File genutzt (ändert sich pro Lauf):
@@ -115,7 +112,7 @@ python main.py build_output.log
 Alternativ: GUI-Dateidialog statt CLI-Argument (TBD).
 
 ## Exclude-Mechanismus
-Verzeichnisse in `mockgenerator.toml` unter `search.exclude_dirs` eintragen, z.B.:
+Verzeichnisse in `mockgenerator.ini` unter `[search] exclude_dirs` eintragen, z.B.:
 - Generierter AUTOSAR-Code
 - Low-Level-Libraries / Vendor-Code
 

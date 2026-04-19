@@ -4,29 +4,27 @@ Automatische Generierung von CMocka-Mocks für C-Unit-Tests aus GCC/CMake Linker
 
 ## Voraussetzungen
 
-- Python 3.8+
-
-```
-pip install -r requirements.txt
-```
+- Python 3.8+ (keine weiteren Abhängigkeiten)
 
 ## Setup
 
-`mockgenerator.toml` im selben Verzeichnis wie `main.py` anlegen:
+`mockgenerator.ini` im selben Verzeichnis wie `main.py` anlegen:
 
-```toml
+```ini
 [project]
-cmake_root = "C:/Projects/MyProject/Code"
-test_cmake_lists = "tests/CMakeLists.txt"  # optional, das ist der Default
+cmake_root = C:/Projects/MyProject/Code
+
+# optional, das ist der Default
+test_cmake_lists = tests/CMakeLists.txt
 
 [search]
-exclude_dirs = [
-    "autosar/generated",   # generierter AUTOSAR-Code
-    "vendor/lowlevel",     # Vendor-Libraries
-]
+# mehrere Einträge: jede weitere Zeile einrücken
+exclude_dirs =
+    autosar/generated
+    vendor/lowlevel
 
 [output]
-output_dir = "mocks_out"
+output_dir = mocks_out
 ```
 
 ## Verwendung

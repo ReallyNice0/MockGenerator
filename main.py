@@ -1,16 +1,8 @@
 from __future__ import annotations
 
+import configparser
 import sys
 from pathlib import Path
-
-try:
-    import tomllib
-except ModuleNotFoundError:
-    try:
-        import tomli as tomllib  # type: ignore[no-redef]
-    except ModuleNotFoundError:
-        print("Error: missing TOML library. Run: pip install tomli")
-        sys.exit(1)
 
 from log_parser import parse_undefined_symbols
 from cmake_analyzer import get_include_dirs
@@ -18,7 +10,7 @@ from header_scanner import scan_symbols
 from mock_generator import generate_mocks
 
 
-CONFIG_FILE = "mockgenerator.toml"
+CONFIG_FILE = "mockgenerator.ini"
 
 
 def main() -> None:
@@ -29,10 +21,10 @@ def main() -> None:
     log_path = sys.argv[1]
     config = _load_config()
 
-    cmake_root = config["project"]["cmake_root"]
-    test_cmake_lists = str(Path(cmake_root) / config["project"].get("test_cmake_lists", "tests/CMakeLists.txt"))
-    exclude_dirs = config.get("search", {}).get("exclude_dirs", [])
-    output_dir = config.get("output", {}).get("output_dir", "mocks_out")
+    cmake_root = config.get("project", "cmake_root")
+    test_cmake_lists = str(Path(cmake_root) / config.get("project", "test_cmake_lists", fallback="tests/CMakeLists.txt"))
+    exclude_dirs = _parse_list(config.get("search", "exclude_dirs", fallback=""))
+    output_dir = config.get("output", "output_dir", fallback="mocks_out")
 
     print(f"[1/4] Parsing build log: {log_path}")
     symbols = parse_undefined_symbols(log_path)
@@ -58,26 +50,33 @@ def main() -> None:
     print(f"\nDone. Mocks written to: {output_path}")
 
 
-def _load_config() -> dict:
+def _load_config() -> configparser.ConfigParser:
     config_path = Path(CONFIG_FILE)
     if not config_path.exists():
         print(f"Error: config file '{CONFIG_FILE}' not found.")
-        print("Create a mockgenerator.toml next to main.py. Example:")
-        print("""
-  [project]
-  cmake_root = "C:/Projects/MyProject/Code"
-  test_cmake_lists = "tests/CMakeLists.txt"  # optional, this is the default
+        print("Create a mockgenerator.ini next to main.py. Example:\n")
+        print("""\
+[project]
+cmake_root = C:/Projects/MyProject/Code
+test_cmake_lists = tests/CMakeLists.txt
 
-  [search]
-  exclude_dirs = ["autosar/generated"]
+[search]
+exclude_dirs =
+    autosar/generated
+    vendor/lowlevel
 
-  [output]
-  output_dir = "mocks_out"
+[output]
+output_dir = mocks_out
 """)
         sys.exit(1)
 
-    with open(config_path, "rb") as f:
-        return tomllib.load(f)
+    config = configparser.ConfigParser()
+    config.read(config_path, encoding="utf-8")
+    return config
+
+
+def _parse_list(value: str) -> list:
+    return [line.strip() for line in value.splitlines() if line.strip()]
 
 
 def _write_output(mock_code: str, log_path: str, output_dir: str) -> Path:

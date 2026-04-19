@@ -1,1 +1,2 @@
-tomli; python_version < "3.11"
+# No external dependencies required.
+# All libraries used are part of the Python standard library (3.8+).
