@@ -4,23 +4,35 @@ import re
 from pathlib import Path
 
 
-def get_include_dirs(cmake_lists_path: str, cmake_root: str, exclude_dirs: list[str] = None) -> list[str]:
+def get_include_dirs(
+    cmake_lists_path: str,
+    cmake_root: str,
+    exclude_dirs: list[str] = None,
+    cmake_vars: dict[str, str] = None,
+) -> list[str]:
     """
     Parse a CMakeLists.txt and return resolved, filtered include directory paths.
 
-    Resolves ${CMAKE_SOURCE_DIR} to cmake_root.
+    Resolves ${CMAKE_SOURCE_DIR} to cmake_root and any extra ${VAR} from cmake_vars.
     Skips directories matching any prefix in exclude_dirs.
     Warns about configured paths that don't exist on disk.
     """
     cmake_root_path = Path(cmake_root).resolve()
     exclude_dirs = exclude_dirs or []
+    cmake_vars = cmake_vars or {}
+
+    substitutions = {"CMAKE_SOURCE_DIR": str(cmake_root_path)}
+    substitutions.update(cmake_vars)
 
     raw_paths = _extract_include_dirs(cmake_lists_path)
     resolved = []
 
     for raw in raw_paths:
-        resolved_path = Path(raw.replace("${CMAKE_SOURCE_DIR}", str(cmake_root_path)))
-        resolved_path = resolved_path.resolve()
+        substituted = _apply_cmake_vars(raw, substitutions)
+        if "${" in substituted:
+            print(f"  [WARNING] Unresolved CMake variable in path, skipping: {substituted}")
+            continue
+        resolved_path = Path(substituted).resolve()
 
         if _is_excluded(resolved_path, cmake_root_path, exclude_dirs):
             continue
@@ -49,6 +61,13 @@ def _extract_include_dirs(cmake_lists_path: str) -> list[str]:
             raw_paths.append(match.group(0))
 
     return raw_paths
+
+
+def _apply_cmake_vars(path: str, variables: dict[str, str]) -> str:
+    """Replace all ${VAR} occurrences using the provided variables dict."""
+    for name, value in variables.items():
+        path = path.replace(f"${{{name}}}", value)
+    return path
 
 
 def _strip_cmake_comments(text: str) -> str:

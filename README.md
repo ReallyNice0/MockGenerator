@@ -23,6 +23,10 @@ exclude_dirs =
     autosar/generated
     vendor/lowlevel
 
+# CMake-Variablen in include-Pfaden auflösen (z.B. ${Variant})
+[cmake_vars]
+Variant = VariantA
+
 [output]
 output_dir = mocks_out
 ```

@@ -24,6 +24,7 @@ def main() -> None:
     cmake_root = config.get("project", "cmake_root")
     test_cmake_lists = str(Path(cmake_root) / config.get("project", "test_cmake_lists", fallback="tests/CMakeLists.txt"))
     exclude_dirs = _parse_list(config.get("search", "exclude_dirs", fallback=""))
+    cmake_vars = _read_cmake_vars(config)
     output_dir = config.get("output", "output_dir", fallback="mocks_out")
 
     print(f"[1/4] Parsing build log: {log_path}")
@@ -34,7 +35,7 @@ def main() -> None:
     print(f"  Found {len(symbols)} symbol(s).")
 
     print(f"[2/4] Analyzing CMake includes: {test_cmake_lists}")
-    include_dirs = get_include_dirs(test_cmake_lists, cmake_root, exclude_dirs)
+    include_dirs = get_include_dirs(test_cmake_lists, cmake_root, exclude_dirs, cmake_vars)
     print(f"  Found {len(include_dirs)} include dir(s).")
 
     print(f"[3/4] Scanning headers for prototypes...")
@@ -73,6 +74,16 @@ output_dir = mocks_out
     config = configparser.ConfigParser()
     config.read(config_path, encoding="utf-8")
     return config
+
+
+def _read_cmake_vars(config: configparser.ConfigParser) -> dict:
+    if not config.has_section("cmake_vars"):
+        return {}
+    # Re-read the file with case-preserved keys for this section only
+    case_config = configparser.RawConfigParser()
+    case_config.optionxform = str
+    case_config.read(CONFIG_FILE, encoding="utf-8")
+    return dict(case_config.items("cmake_vars")) if case_config.has_section("cmake_vars") else {}
 
 
 def _parse_list(value: str) -> list:
