@@ -26,6 +26,30 @@ def parse_undefined_symbols(log_path: str, pattern: str = DEFAULT_PATTERN) -> li
     return sorted(symbols)
 
 
+def parse_symbols_by_file(log_path: str, pattern: str = DEFAULT_PATTERN) -> dict[str, list[str]]:
+    """
+    Parse a build log and return symbols grouped by source file basename.
+
+    Returns {basename.c: [sorted, unique symbols]}.
+    """
+    compiled = re.compile(pattern)
+    file_pattern = re.compile(r"([\w./\\-]+\.c):\d+:")
+    result: dict[str, set] = {}
+
+    with open(log_path, encoding="utf-8", errors="replace") as f:
+        for line in f:
+            sym_match = compiled.search(line)
+            if not sym_match:
+                continue
+            file_match = file_pattern.search(line)
+            if not file_match:
+                continue
+            basename = Path(file_match.group(1)).name
+            result.setdefault(basename, set()).add(sym_match.group(1))
+
+    return {f: sorted(syms) for f, syms in sorted(result.items())}
+
+
 if __name__ == "__main__":
     import sys
 
