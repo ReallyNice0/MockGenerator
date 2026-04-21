@@ -9,7 +9,7 @@ from log_parser import parse_undefined_symbols, parse_symbols_by_file, DEFAULT_P
 from cmake_analyzer import get_include_dirs
 from header_scanner import scan_symbols
 from mock_generator import generate_mocks
-from injector import find_test_file, inject_mocks, get_existing_mock_symbols
+from injector import find_test_file, inject_mocks, get_existing_mock_symbols, MOCK_SECTION_START, MOCK_SECTION_END
 
 
 CONFIG_FILE = "mockgenerator.ini"
@@ -86,6 +86,8 @@ def _run_inplace(
 ) -> None:
     tests_root = str(Path(cmake_root) / config.get("project", "tests_root", fallback="tests"))
     prefixes = _parse_list(config.get("output", "test_file_prefixes", fallback="TestUnit_\nTestIntegration_"))
+    mock_start_pattern = config.get("output", "mock_section_start", fallback=MOCK_SECTION_START)
+    mock_end_pattern = config.get("output", "mock_section_end", fallback=MOCK_SECTION_END)
 
     print(f"[1/4] Parsing build log (grouped by file): {log_path}")
     symbols_by_file = parse_symbols_by_file(log_path, symbol_pattern)
@@ -127,7 +129,7 @@ def _run_inplace(
             not_found=[s for s in syms if s in all_results.not_found],
         )
 
-        existing = get_existing_mock_symbols(test_file)
+        existing = get_existing_mock_symbols(test_file, mock_start_pattern, mock_end_pattern)
         file_result.functions = {k: v for k, v in file_result.functions.items() if k not in existing}
         file_result.variables = {k: v for k, v in file_result.variables.items() if k not in existing}
         file_result.not_found = [s for s in file_result.not_found if s not in existing]
@@ -149,7 +151,7 @@ def _run_inplace(
         if verbose:
             for s in new_syms:
                 print(f"    (inject) {s}")
-        if inject_mocks(test_file, mock_code):
+        if inject_mocks(test_file, mock_code, mock_start_pattern, mock_end_pattern):
             injected += 1
         else:
             failed += 1

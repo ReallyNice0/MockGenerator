@@ -37,6 +37,10 @@ output_dir = mocks_out
 test_file_prefixes =
     TestUnit_
     TestIntegration_
+
+# Regex patterns for the mock section boundaries (inplace mode only)
+# mock_section_start = @defgroup.*Mocks
+# mock_section_end = ^\s*/\*\*
 ```
 
 ## Usage
@@ -75,9 +79,18 @@ test_file_prefixes =
 
 The tool searches for a matching file anywhere under `tests_root`. Files whose basename does not start with a configured prefix are silently skipped.
 
-**2. Mock section marker**
+**2. Mock section markers**
 
-The test file must contain a Doxygen `@defgroup` comment with the word `Mocks` in the same line. Mocks are injected just before the next `@defgroup` block (or at end of file if there is none).
+The tool locates the mock section using two configurable regex patterns:
+
+| Option | Default | Matches |
+|--------|---------|---------|
+| `mock_section_start` | `@defgroup.*Mocks` | Line that opens the mock section |
+| `mock_section_end` | `^\s*/\*\*` | First line after the start that ends the section |
+
+Mocks are injected immediately before the line matching `mock_section_end`. If no end marker is found, mocks are appended at the end of the file. If the start marker is missing entirely, the tool prints an error and skips that file.
+
+Default layout (Doxygen `@defgroup` style):
 
 ```c
 /**
@@ -87,13 +100,27 @@ The test file must contain a Doxygen `@defgroup` comment with the word `Mocks` i
 
 /* generated mocks are inserted here */
 
-/**
- * @defgroup UnitTest_MyModule_Tests Test Cases  <-- injection stops before this
+/**                                        <-- mock_section_end matches here
+ * @defgroup UnitTest_MyModule_Tests Test Cases
  * @{
  */
 ```
 
-If the marker is missing, the tool prints an error and skips that file.
+Alternative layout using explicit comment markers:
+
+```c
+/* Start of generated mocks */
+
+/* generated mocks are inserted here */
+
+/* End of generated mocks */               <-- mock_section_end matches here
+```
+
+```ini
+[output]
+mock_section_start = /\* Start of generated mocks \*/
+mock_section_end = /\* End of generated mocks \*/
+```
 
 ## Output Format
 
