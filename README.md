@@ -1,59 +1,75 @@
 # MockGenerator
 
-Automatische Generierung von CMocka-Mocks für C-Unit-Tests aus GCC/CMake Linker-Fehlern.
+Automatically generates CMocka mocks for C unit tests from GCC/CMake linker errors.
 
-## Voraussetzungen
+## Requirements
 
-- Python 3.8+ (keine weiteren Abhängigkeiten)
+- Python 3.8+ (no external dependencies)
 
 ## Setup
 
-`mockgenerator.ini` im selben Verzeichnis wie `main.py` anlegen:
+Create `mockgenerator.ini` in the same directory as `main.py`:
 
 ```ini
 [project]
 cmake_root = C:/Projects/MyProject/Code
 
-# optional, das ist der Default
+# optional, this is the default
 test_cmake_lists = tests/CMakeLists.txt
 
+# path to the tests directory, relative to cmake_root (default: tests)
+tests_root = tests
+
 [search]
-# mehrere Einträge: jede weitere Zeile einrücken
+# multiple entries: indent each additional line
 exclude_dirs =
     autosar/generated
     vendor/lowlevel
 
-# CMake-Variablen in include-Pfaden auflösen (z.B. ${Variant})
+# CMake variables used in include paths (e.g. ${Variant})
 [cmake_vars]
 Variant = VariantA
 
 [output]
+# mode: "file" = write to .txt | "inplace" = inject directly into test file
+mode = file
 output_dir = mocks_out
+test_file_prefixes =
+    TestUnit_
+    TestIntegration_
 ```
 
-## Verwendung
+## Usage
 
-1. CMake/make Build ausführen, Fehler-Output in eine Datei speichern
-2. Tool aufrufen:
+1. Run the CMake/make build and save the error output to a file
+2. Run the tool:
 
 ```
 python main.py build_output.log
 ```
 
-Die generierten Mocks landen in `mocks_out/build_output_mocks.txt`.
+Generated mocks are written to `mocks_out/build_output_mocks.txt`.
 
-## Output-Format
+For direct injection into the test file:
 
-### Funktionen
+```
+python main.py build_output.log --inplace
+```
+
+Use `-v` / `--verbose` for detailed output.
+
+## Output Format
+
+### Functions
 
 ```c
-// void/void
+// void return, no parameters
 void Foo_Reset(void)
 {
     function_called();
 }
 
-// non-void return + Parameter
+// non-void return + parameters
 Std_ReturnType Foo_Read(uint8 Index, P2VAR(uint8, AUTOMATIC, DATA) BufferPtr)
 {
     check_expected(Index);
@@ -62,23 +78,24 @@ Std_ReturnType Foo_Read(uint8 Index, P2VAR(uint8, AUTOMATIC, DATA) BufferPtr)
 }
 ```
 
-### Variablen
+### Variables
 
 ```c
 uint8 Foo_StatusVariable = {0}; /* MOCK: verify initial value */
 ```
 
-### Nicht auflösbare Symbole
+### Unresolved symbols
 
-Symbole die in keinem Header gefunden wurden erscheinen als Kommentar:
+Symbols not found in any header appear as a comment placeholder:
 
 ```c
 /* MOCK: the following symbols could not be resolved - handle manually: */
 /* SomeUnknownSymbol */
 ```
 
-## Hinweise
+## Notes
 
-- Relevante Include-Pfade werden aus `tests/CMakeLists.txt` gelesen
-- Pfade die in der CMakeLists.txt stehen aber nicht existieren werden als WARNING ausgegeben
-- AUTOSAR Compiler-Abstraktions-Makros (`FUNC()`, `P2VAR()`, `P2CONST()` etc.) werden unterstützt
+- Include paths are read from `tests/CMakeLists.txt`
+- Paths listed in CMakeLists.txt that do not exist on disk are reported as warnings
+- AUTOSAR compiler abstraction macros (`FUNC()`, `P2VAR()`, `P2CONST()` etc.) are supported
+- Already mocked symbols are detected and skipped on repeated runs (inplace mode)

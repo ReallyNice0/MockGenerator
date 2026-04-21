@@ -12,24 +12,13 @@ def find_test_file(source_basename: str, tests_root: str, prefixes: list[str]) -
     Only returns files that are inside tests_root (safety check).
     """
     tests_path = Path(tests_root).resolve()
-    stem = Path(source_basename).stem
 
-    candidates: list[str] = []
+    if not any(source_basename.startswith(p) for p in prefixes):
+        return None
 
-    # If the log already references a test file directly (e.g. TestUnit_Foo.c)
-    for prefix in prefixes:
-        if source_basename.startswith(prefix):
-            candidates.append(source_basename)
-            break
-
-    # Also try constructing the test filename from the stem
-    for prefix in prefixes:
-        candidates.append(f"{prefix}{stem}.c")
-
-    for candidate in candidates:
-        for match in tests_path.rglob(candidate):
-            if _is_under(match, tests_path):
-                return str(match)
+    for match in tests_path.rglob(source_basename):
+        if _is_under(match, tests_path):
+            return str(match)
 
     return None
 
