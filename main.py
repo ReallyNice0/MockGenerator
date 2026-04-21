@@ -111,12 +111,12 @@ def _run_inplace(
     _print_scan_result(all_results, verbose)
 
     print(f"\n[4/4] Injecting mocks into test files...")
-    injected, skipped = 0, 0
+    injected, nothing_new, no_test_file, failed = 0, 0, 0, 0
     for src_file, syms in symbols_by_file.items():
         test_file = find_test_file(src_file, tests_root, prefixes)
         if not test_file:
             print(f"  [WARNING] No test file found for: {src_file} (skipping)")
-            skipped += 1
+            no_test_file += 1
             continue
 
         # Build a ScanResult containing only this file's symbols
@@ -126,7 +126,6 @@ def _run_inplace(
             variables={s: all_results.variables[s] for s in syms if s in all_results.variables},
             not_found=[s for s in syms if s in all_results.not_found],
         )
-        mock_code = generate_mocks(file_result)
 
         existing = get_existing_mock_symbols(test_file)
         file_result.functions = {k: v for k, v in file_result.functions.items() if k not in existing}
@@ -142,6 +141,7 @@ def _run_inplace(
                     print(f"    (skip) {s}")
         if not new_syms:
             print(f"  Nothing new to inject for {src_file}.")
+            nothing_new += 1
             continue
 
         mock_code = generate_mocks(file_result)
@@ -152,9 +152,16 @@ def _run_inplace(
         if inject_mocks(test_file, mock_code):
             injected += 1
         else:
-            skipped += 1
+            failed += 1
 
-    print(f"\nDone. Injected into {injected} file(s), skipped {skipped}.")
+    parts = [f"Injected into {injected} file(s)"]
+    if nothing_new:
+        parts.append(f"already up-to-date: {nothing_new}")
+    if no_test_file:
+        parts.append(f"no test file found: {no_test_file}")
+    if failed:
+        parts.append(f"injection failed: {failed}")
+    print(f"\nDone. {', '.join(parts)}.")
 
 
 def _print_scan_result(result, verbose: bool) -> None:
