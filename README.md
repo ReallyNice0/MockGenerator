@@ -58,6 +58,43 @@ python main.py build_output.log --inplace
 
 Use `-v` / `--verbose` for detailed output.
 
+## Inplace Mode Requirements
+
+Two conditions must be met for `--inplace` to work on a test file:
+
+**1. Test file naming**
+
+The build log line must contain the test file's basename (e.g. `TestUnit_ComponentA.c`), and that name must start with one of the configured prefixes:
+
+```ini
+[output]
+test_file_prefixes =
+    TestUnit_
+    TestIntegration_
+```
+
+The tool searches for a matching file anywhere under `tests_root`. Files whose basename does not start with a configured prefix are silently skipped.
+
+**2. Mock section marker**
+
+The test file must contain a Doxygen `@defgroup` comment with the word `Mocks` in the same line. Mocks are injected just before the next `@defgroup` block (or at end of file if there is none).
+
+```c
+/**
+ * @defgroup UnitTest_MyModule_Mock Mocks
+ * @{
+ */
+
+/* generated mocks are inserted here */
+
+/**
+ * @defgroup UnitTest_MyModule_Tests Test Cases  <-- injection stops before this
+ * @{
+ */
+```
+
+If the marker is missing, the tool prints an error and skips that file.
+
 ## Output Format
 
 ### Functions
