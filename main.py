@@ -8,7 +8,7 @@ from pathlib import Path
 from log_parser import parse_undefined_symbols, parse_symbols_by_file, DEFAULT_PATTERN
 from cmake_analyzer import get_include_dirs
 from header_scanner import scan_symbols
-from mock_generator import generate_mocks
+from mock_generator import generate_mocks, VARIABLE_MOCK_HINT, MAX_HINT_LENGTH
 from injector import find_test_file, inject_mocks, get_existing_mock_symbols, MOCK_SECTION_START, MOCK_SECTION_END
 
 
@@ -33,19 +33,20 @@ def main() -> None:
     output_dir = config.get("output", "output_dir", fallback="mocks_out")
     symbol_pattern = config.get("log_parser", "symbol_pattern", fallback=DEFAULT_PATTERN)
     mode = "inplace" if args.inplace else config.get("output", "mode", fallback="file")
+    variable_hint = _load_variable_hint(config)
 
     if mode == "inplace":
         _run_inplace(log_path, symbol_pattern, cmake_root, exclude_dirs, cmake_vars,
-                     test_cmake_lists, config, verbose)
+                     test_cmake_lists, config, verbose, variable_hint)
     else:
         _run_file(log_path, symbol_pattern, cmake_root, exclude_dirs, cmake_vars,
-                  test_cmake_lists, output_dir, verbose)
+                  test_cmake_lists, output_dir, verbose, variable_hint)
 
 
 def _run_file(
     log_path: str, symbol_pattern: str, cmake_root: str,
     exclude_dirs: list, cmake_vars: dict, test_cmake_lists: str,
-    output_dir: str, verbose: bool,
+    output_dir: str, verbose: bool, variable_hint: str,
 ) -> None:
     print(f"[1/4] Parsing build log: {log_path}")
     symbols = parse_undefined_symbols(log_path, symbol_pattern)
@@ -69,7 +70,7 @@ def _run_file(
     _print_scan_result(result, verbose)
 
     print(f"\n[4/4] Generating mocks...")
-    mock_code = generate_mocks(result)
+    mock_code = generate_mocks(result, variable_hint)
     output_path = _write_output(mock_code, log_path, output_dir)
     print(f"\nDone. Mocks written to: {output_path}")
 
@@ -83,6 +84,7 @@ def _run_inplace(
     test_cmake_lists: str,
     config: configparser.ConfigParser,
     verbose: bool,
+    variable_hint: str,
 ) -> None:
     tests_root = str(Path(cmake_root) / config.get("project", "tests_root", fallback="tests"))
     prefixes = _parse_list(config.get("output", "test_file_prefixes", fallback="TestUnit_\nTestIntegration_"))
@@ -146,7 +148,7 @@ def _run_inplace(
             nothing_new += 1
             continue
 
-        mock_code = generate_mocks(file_result)
+        mock_code = generate_mocks(file_result, variable_hint)
         print(f"  {src_file}  ->  {test_file}")
         if verbose:
             for s in new_syms:
@@ -214,6 +216,14 @@ def _read_cmake_vars(config: configparser.ConfigParser) -> dict:
     case_config.optionxform = str
     case_config.read(CONFIG_FILE, encoding="utf-8")
     return dict(case_config.items("cmake_vars")) if case_config.has_section("cmake_vars") else {}
+
+
+def _load_variable_hint(config: configparser.ConfigParser) -> str:
+    hint = config.get("output", "mock_variable_hint", fallback=VARIABLE_MOCK_HINT)
+    if len(hint) > MAX_HINT_LENGTH:
+        print(f"  [WARNING] mock_variable_hint exceeds {MAX_HINT_LENGTH} characters, using default.")
+        return VARIABLE_MOCK_HINT
+    return hint
 
 
 def _parse_list(value: str) -> list:

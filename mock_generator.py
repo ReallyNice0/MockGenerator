@@ -2,12 +2,15 @@ from __future__ import annotations
 
 from header_scanner import FunctionDecl, ScanResult, VariableDecl, extract_param_name
 
+VARIABLE_MOCK_HINT = "/* MOCK: verify initial value */"
+MAX_HINT_LENGTH = 80
 
-def generate_mocks(scan_result: ScanResult) -> str:
+
+def generate_mocks(scan_result: ScanResult, variable_hint: str = VARIABLE_MOCK_HINT) -> str:
     blocks: list[str] = []
 
     for decl in scan_result.variables.values():
-        blocks.append(_generate_variable_mock(decl))
+        blocks.append(_generate_variable_mock(decl, variable_hint))
 
     for decl in scan_result.functions.values():
         blocks.append(_generate_function_mock(decl))
@@ -51,12 +54,9 @@ def _build_function_body(decl: FunctionDecl, void_return: bool, has_params: bool
     return "\n".join(lines)
 
 
-def _generate_variable_mock(decl: VariableDecl) -> str:
-    # Pointer (rare) → NULL_PTR, everything else (scalar, array, struct) → {0}
-    # TODO: consider inspecting <Component>_Types headers or .c files to
-    # distinguish scalars from structs for more precise initializers.
+def _generate_variable_mock(decl: VariableDecl, hint: str) -> str:
     init = "NULL_PTR" if "*" in decl.decl_text else "{0}"
-    return f"{decl.decl_text} = {init}; /* MOCK: verify initial value */"
+    return f"{decl.decl_text} = {init}; {hint}"
 
 
 def _generate_not_found_comment(symbols: list[str]) -> str:

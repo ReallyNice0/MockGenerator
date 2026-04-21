@@ -38,6 +38,9 @@ test_file_prefixes =
     TestUnit_
     TestIntegration_
 
+# Hint comment appended to generated variable mocks (max 80 characters)
+# mock_variable_hint = /* MOCK: verify initial value */
+
 # Regex patterns for the mock section boundaries (inplace mode only)
 # mock_section_start = @defgroup.*Mocks
 # mock_section_end = ^\s*/\*\*
@@ -146,6 +149,13 @@ Std_ReturnType Foo_Read(uint8 Index, P2VAR(uint8, AUTOMATIC, DATA) BufferPtr)
 
 ```c
 uint8 Foo_StatusVariable = {0}; /* MOCK: verify initial value */
+```
+
+The trailing comment is configurable via `mock_variable_hint` (max 80 characters). Useful for IDE plugins that highlight specific patterns such as `TODO` or `MOCK`:
+
+```ini
+[output]
+mock_variable_hint = /* TODO: Generated initialisation of unknown Type */
 ```
 
 ### Unresolved symbols
