@@ -1,10 +1,25 @@
 from __future__ import annotations
 
 import re
+import sys
 from pathlib import Path
 
 
 DEFAULT_PATTERN = r"undefined reference to `([^']+)'"
+
+
+def _compile_pattern(pattern: str) -> re.Pattern:
+    try:
+        compiled = re.compile(pattern)
+    except re.error as exc:
+        print(f"[ERROR] Invalid symbol_pattern in config: {exc}")
+        print(f"  Pattern: {pattern}")
+        sys.exit(1)
+    if compiled.groups != 1:
+        print(f"[ERROR] symbol_pattern must contain exactly one capture group (found {compiled.groups}).")
+        print(f"  Pattern: {pattern}")
+        sys.exit(1)
+    return compiled
 
 
 def parse_undefined_symbols(log_path: str, pattern: str = DEFAULT_PATTERN) -> list[str]:
@@ -14,7 +29,7 @@ def parse_undefined_symbols(log_path: str, pattern: str = DEFAULT_PATTERN) -> li
     The pattern must contain exactly one capture group for the symbol name.
     Returns a sorted, deduplicated list of symbol names.
     """
-    compiled = re.compile(pattern)
+    compiled = _compile_pattern(pattern)
     symbols = set()
 
     with open(log_path, encoding="utf-8", errors="replace") as f:
@@ -32,7 +47,7 @@ def parse_symbols_by_file(log_path: str, pattern: str = DEFAULT_PATTERN) -> dict
 
     Returns {basename.c: [sorted, unique symbols]}.
     """
-    compiled = re.compile(pattern)
+    compiled = _compile_pattern(pattern)
     file_pattern = re.compile(r"([\w./\\-]+\.c):\d+:")
     result: dict[str, set] = {}
 
