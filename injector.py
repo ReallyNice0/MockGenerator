@@ -102,7 +102,9 @@ def get_existing_mock_symbols(
     inject_at = _find_injection_point(lines, start_re, end_re) or len(lines)
     mock_section = "\n".join(lines[mock_start:inject_at])
 
-    return set(re.findall(r"\b(\w+)\s*(?:\(|=)", mock_section))
+    declared = set(re.findall(r"\b(\w+)\s*(?:\(|\[|=)", mock_section))
+    placeholders = set(re.findall(r"/\*\s*(\w+)\s*\*/", mock_section))
+    return declared | placeholders
 
 
 def _is_under(path: Path, root: Path) -> bool:
