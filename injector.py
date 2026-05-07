@@ -11,17 +11,24 @@ def find_test_file(source_basename: str, tests_root: str, prefixes: list[str]) -
     """
     Locate a test file in tests_root matching source_basename.
 
-    Accepts files that already start with a valid prefix, or tries prepending each prefix.
+    If source_basename already starts with a configured prefix (e.g. TestUnit_Foo.c),
+    it is searched directly. Otherwise each prefix is prepended to the stem
+    (e.g. DiagnosticSupport_Foo.c -> TestUnit_DiagnosticSupport_Foo.c) to handle
+    build logs that reference the implementation file rather than the test file.
     Only returns files that are inside tests_root (safety check).
     """
     tests_path = Path(tests_root).resolve()
 
-    if not any(source_basename.startswith(p) for p in prefixes):
-        return None
+    if any(source_basename.startswith(p) for p in prefixes):
+        candidates = [source_basename]
+    else:
+        stem = Path(source_basename).stem
+        candidates = [f"{p}{stem}.c" for p in prefixes]
 
-    for match in tests_path.rglob(source_basename):
-        if _is_under(match, tests_path):
-            return str(match)
+    for candidate in candidates:
+        for match in tests_path.rglob(candidate):
+            if _is_under(match, tests_path):
+                return str(match)
 
     return None
 
