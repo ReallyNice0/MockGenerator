@@ -48,7 +48,7 @@ def parse_symbols_by_file(log_path: str, pattern: str = DEFAULT_PATTERN) -> dict
     Returns {basename.c: [sorted, unique symbols]}.
     """
     compiled = _compile_pattern(pattern)
-    file_pattern = re.compile(r"([\w./\\-]+\.c):\d+:")
+    file_pattern = re.compile(r"([\w./\\-]+\.c)(?:\.o)?:[^:]+:")
     result: dict[str, set] = {}
 
     with open(log_path, encoding="utf-8", errors="replace") as f:
