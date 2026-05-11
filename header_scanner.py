@@ -96,18 +96,31 @@ def _strip_preprocessor(text: str) -> str:
 
 
 def _extract_declaration(text: str, symbol: str, pattern: re.Pattern) -> str | None:
-    match = pattern.search(text)
-    if not match:
-        return None
+    for match in pattern.finditer(text):
+        pos = match.start()
+        if _brace_depth_at(text, pos) > 0:
+            continue  # inside a function/block body — not a declaration
 
-    pos = match.start()
-    start = _find_decl_start(text, pos)
-    end = _find_decl_end(text, pos)
-    if end == -1:
-        return None
+        start = _find_decl_start(text, pos)
+        end = _find_decl_end(text, pos)
+        if end == -1:
+            continue
 
-    raw = text[start : end + 1]
-    return " ".join(raw.split())  # normalize whitespace
+        raw = text[start : end + 1]
+        return " ".join(raw.split())
+
+    return None
+
+
+def _brace_depth_at(text: str, pos: int) -> int:
+    """Return the net brace nesting depth at position pos."""
+    depth = 0
+    for ch in text[:pos]:
+        if ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+    return max(0, depth)
 
 
 def _find_decl_start(text: str, pos: int) -> int:
